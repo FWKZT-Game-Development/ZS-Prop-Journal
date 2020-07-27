@@ -157,14 +157,16 @@ hook.Add( "KeyPress", "ZS.PropJournalCheck.KeyPress", function( ply, key )
 					if #trace_ent:GetChildren() > 0 then
 						local nail = trace_ent:GetChildren()[1]
 						if nail and nail:IsValid() then
-							if nail:GetDeployer() == ply then
-								if key == IN_USE and IsFirstTimePredicted() then
-									if not PropDataContainer[ nail:GetBaseEntity() ] and #table.GetKeys(PropDataContainer) < 18 then
-										PropDataContainer[ nail:GetBaseEntity() ] = true
-										GAMEMODE.PropJournal:PushPropData()
-									else
-										PropDataContainer[ nail:GetBaseEntity() ] = nil
-										GAMEMODE.PropJournal:PushPropData()
+							if ( nail:GetDeployer() and nail:GetDeployer():IsValid() ) then
+								if nail:GetDeployer() == ply then
+									if key == IN_USE and IsFirstTimePredicted() then
+										if not PropDataContainer[ nail:GetBaseEntity() ] and #table.GetKeys(PropDataContainer) < 18 then
+											PropDataContainer[ nail:GetBaseEntity() ] = true
+											GAMEMODE.PropJournal:PushPropData()
+										else
+											PropDataContainer[ nail:GetBaseEntity() ] = nil
+											GAMEMODE.PropJournal:PushPropData()
+										end
 									end
 								end
 							end
