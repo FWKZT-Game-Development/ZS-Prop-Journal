@@ -114,7 +114,7 @@ function PANEL:Think()
 
 		if #PropDataContainer > 0 then
 			for pid, props in ipairs( PropDataContainer ) do
-				if props:GetChildren()[1] == nil then
+				if not props:GetChildren()[1] then
 					for cid, pnls in ipairs( self:GetChildren() ) do
 						if pid == cid then
 							table.remove( PropDataContainer, pid )
@@ -181,7 +181,15 @@ hook.Add("Think", "ZS.PropJournalCheck", function()
 			end
 			
 			if #PropDataContainer > 0 then
-				if MySelf:KeyDown(IN_SPEED) and MySelf:KeyDown(IN_RELOAD) and MySelf:KeyDown(IN_USE) then
+				if MySelf:IsValidHuman() and MySelf:KeyDown(IN_SPEED) and MySelf:KeyDown(IN_RELOAD) and MySelf:KeyDown(IN_USE) then
+					for pid, props in ipairs( PropDataContainer ) do
+						table.remove( PropDataContainer, pid )
+					end
+					for cid, pnls in ipairs( GAMEMODE.PropJournal:GetChildren() ) do
+						pnls:Remove()
+					end
+				end
+				if MySelf:IsValidZombie() then
 					for pid, props in ipairs( PropDataContainer ) do
 						table.remove( PropDataContainer, pid )
 					end
