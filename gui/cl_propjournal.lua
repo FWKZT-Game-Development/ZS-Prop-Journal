@@ -13,6 +13,8 @@ function PANEL:Init()
 	self:DockMargin(0, 0, 0, 0)
 	self:DockPadding(0, 0, 0, 0)
 
+	PropDataContainer = {}
+
 	self:ParentToHUD()
 	self:InvalidateLayout()
 end
@@ -45,9 +47,13 @@ function PANEL:PushPropData()
 	y_offset = screenscale_sized
 	y_offset2 = screenscale_sized
 	y_offset3 = screenscale_sized
-
-	for _, prop in ipairs( PropDataContainer ) do
+	
+	local _ = 0
+	for prop, bol in pairs( PropDataContainer ) do
 		if prop and prop:IsValid() and #prop:GetChildren() > 0 then
+
+			_ = _ + 1
+
 			local PropFrame = vgui.Create("ModelImage", self)
 			if _ <= 6 then
 				PropFrame:SetPos(0,y_offset)
@@ -59,6 +65,7 @@ function PANEL:PushPropData()
 
 			PropFrame:SetSize(screenscale_sized,screenscale_sized)
 			PropFrame:SetModel( prop:GetModel() )
+			PropFrame.SavedProp = prop
 
 			--local OldPaintOver = PropFrame.PaintOver
 			PropFrame.PaintOver = function(pnl,w,h)
@@ -107,58 +114,56 @@ function PANEL:PushPropData()
 	end
 end
 
-function PANEL:Think()
-	if CurTime() >= self.NextRefresh then
-		self.NextRefresh = CurTime() + self.RefreshTime
-
-		self:PushPropData()
-	end
-end
-
 function PANEL:Paint(w, h)
-
 end
 vgui.Register("ZS_PropJournal", PANEL, "Panel")
 
 --debug tool
---[[concommand.Add( "reload_props", function( pl, cmd, args )
+concommand.Add( "reload_props", function( pl, cmd, args )
 	if GAMEMODE.PropJournal then
 		GAMEMODE.PropJournal:Remove()
 		GAMEMODE.PropJournal = nil
 	else
 		GAMEMODE.PropJournal = vgui.Create("ZS_PropJournal")
 	end
-end )]]
+end )
 
-hook.Add("Think", "ZS.PropJournalCheck", function()
-	if MySelf:IsValid() then
+net.Receive( "zs_nail_destroyed", function( len, pl )
+	--print("nailed destryoed")
+	if ( IsValid( pl ) and pl:IsPlayer() ) then
+		print( "Message from " .. pl:Nick() .. " received. Its length is " .. len .. "." )
+	else
+		local prop = net.ReadEntity()
+		local nailcount = net.ReadInt(5)
+		print(nailcount)
+		if #GAMEMODE.PropJournal:GetChildren() > 0 then
+			for cid, pnls in ipairs( GAMEMODE.PropJournal:GetChildren() ) do
+				if pnls.SavedProp == prop and nailcount <= 0 then
+					PropDataContainer[ prop ] = nil
+					GAMEMODE.PropJournal:PushPropData()
+					pnls:Remove()
+				end
+			end
+		end
+	end
+end )
+
+hook.Add( "KeyPress", "ZS.PropJournalCheck.KeyPress", function( ply, key )
+	if ply:IsValid() then
 		if GAMEMODE.PropJournal then
-			local trace_ent = MySelf:GetEyeTrace().Entity
+			local trace_ent = ply:GetEyeTrace().Entity
 			if trace_ent and trace_ent:IsValid() then
 				if trace_ent:IsNailed() then
 					if #trace_ent:GetChildren() > 0 then
 						local nail = trace_ent:GetChildren()[1]
 						if nail and nail:IsValid() then
-							if nail:GetDeployer() == MySelf then
-								if not table.HasValue( PropDataContainer, nail:GetBaseEntity() ) then
-									--print(#PropDataContainer)
-									if MySelf:KeyDown(IN_SPEED) and MySelf:KeyDown(IN_USE) and #PropDataContainer < 18 then
-										PropDataContainer[ #PropDataContainer + 1 ] = nail:GetBaseEntity()
+							if nail:GetDeployer() == ply then
+								if key == IN_USE and IsFirstTimePredicted() then
+									if not PropDataContainer[ nail:GetBaseEntity() ] and #table.GetKeys(PropDataContainer) < 18 then
+										PropDataContainer[ nail:GetBaseEntity() ] = true
 										GAMEMODE.PropJournal:PushPropData()
-									end
-								else
-									--print(#PropDataContainer)
-									if MySelf:KeyDown(IN_SPEED) and MySelf:KeyDown(IN_RELOAD) and #PropDataContainer > 0 then
-										for pid, props in ipairs( PropDataContainer ) do
-											if trace_ent == props then
-												for cid, pnls in ipairs( GAMEMODE.PropJournal:GetChildren() ) do
-													if pid == cid then
-														table.remove( PropDataContainer, pid )
-														pnls:Remove()
-													end
-												end
-											end
-										end
+									else
+										PropDataContainer[ nail:GetBaseEntity() ] = nil
 										GAMEMODE.PropJournal:PushPropData()
 									end
 								end
@@ -168,19 +173,12 @@ hook.Add("Think", "ZS.PropJournalCheck", function()
 				end
 			end
 			
-			if #PropDataContainer > 0 then
-				if MySelf:IsValidHuman() and MySelf:KeyDown(IN_SPEED) and MySelf:KeyDown(IN_RELOAD) and MySelf:KeyDown(IN_USE) then
-					for pid, props in ipairs( PropDataContainer ) do
-						table.remove( PropDataContainer, pid )
-					end
-					for cid, pnls in ipairs( GAMEMODE.PropJournal:GetChildren() ) do
-						pnls:Remove()
-					end
+			if ply:IsValidHuman() and ply:KeyDown(IN_SPEED) and ply:KeyDown(IN_RELOAD) and ply:KeyDown(IN_USE) or ply:IsValidZombie() then
+				if #table.GetKeys(PropDataContainer) > 0 then
+					PropDataContainer = {}
 				end
-				if MySelf:IsValidZombie() then
-					for pid, props in ipairs( PropDataContainer ) do
-						table.remove( PropDataContainer, pid )
-					end
+
+				if #GAMEMODE.PropJournal:GetChildren() > 0 then
 					for cid, pnls in ipairs( GAMEMODE.PropJournal:GetChildren() ) do
 						pnls:Remove()
 					end
@@ -188,4 +186,4 @@ hook.Add("Think", "ZS.PropJournalCheck", function()
 			end
 		end
 	end
-end)
+end )
