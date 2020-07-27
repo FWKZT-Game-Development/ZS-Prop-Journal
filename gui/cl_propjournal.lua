@@ -4,7 +4,7 @@
 local PANEL = {}
 local h_offset = 40
 
-PANEL.RefreshTime = 1
+PANEL.RefreshTime = 0.5
 PANEL.NextRefresh = 0
 
 local PropDataContainer = {}
