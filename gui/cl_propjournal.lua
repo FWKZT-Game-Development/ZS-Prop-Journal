@@ -4,7 +4,7 @@
 local PANEL = {}
 local h_offset = 40
 
-PANEL.RefreshTime = 0.5
+PANEL.RefreshTime = 5
 PANEL.NextRefresh = 0
 
 local PropDataContainer = {}
@@ -47,7 +47,7 @@ function PANEL:PushPropData()
 	y_offset3 = screenscale_sized
 
 	for _, prop in ipairs( PropDataContainer ) do
-		if prop and prop:IsValid() then
+		if prop and prop:IsValid() and #prop:GetChildren() > 0 then
 			local PropFrame = vgui.Create("ModelImage", self)
 			if _ <= 6 then
 				PropFrame:SetPos(0,y_offset)
@@ -110,20 +110,8 @@ end
 function PANEL:Think()
 	if CurTime() >= self.NextRefresh then
 		self.NextRefresh = CurTime() + self.RefreshTime
-		--PropDataContainer = {}
 
-		if #PropDataContainer > 0 then
-			for pid, props in ipairs( PropDataContainer ) do
-				if not props:GetChildren()[1] then
-					for cid, pnls in ipairs( self:GetChildren() ) do
-						if pid == cid then
-							table.remove( PropDataContainer, pid )
-							pnls:Remove()
-						end
-					end
-				end
-			end
-		end
+		self:PushPropData()
 	end
 end
 
