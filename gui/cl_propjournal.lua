@@ -38,7 +38,7 @@ local x_txt_offset = -20
 local x_icon_offset = 40
 
 function PANEL:PushPropData()
-	for _, pnls in ipairs( self:GetChildren() ) do
+	for _, pnls in ipairs( self:GetChildren() ) do 
 		pnls:Remove()
 	end
 
@@ -50,8 +50,7 @@ function PANEL:PushPropData()
 	
 	local _ = 0
 	for prop, bol in pairs( PropDataContainer ) do
-		if prop and prop:IsValid() and #prop:GetChildren() > 0 then
-
+		if prop and prop:IsValid() then
 			_ = _ + 1
 
 			local PropFrame = vgui.Create("ModelImage", self)
@@ -64,7 +63,7 @@ function PANEL:PushPropData()
 			end
 
 			PropFrame:SetSize(screenscale_sized,screenscale_sized)
-			PropFrame:SetModel( prop:GetModel() )
+			PropFrame:SetModel( prop:GetBaseEntity():GetModel() )
 			PropFrame.SavedProp = prop
 
 			--local OldPaintOver = PropFrame.PaintOver
@@ -72,33 +71,30 @@ function PANEL:PushPropData()
 				--OldPaintOver(pnl,w,h)
 				local screenscale = BetterScreenScale()
 
-				if ( prop and prop:IsValid() ) and #prop:GetChildren() > 0 then
-					if prop:GetChildren()[1] and prop:GetChildren()[1]:IsValid() then
-						local nail = prop:GetChildren()[1]
-						local nhp = nail:GetNailHealth()
-						local mnhp = nail:GetMaxNailHealth()
-						local repairs = nail:GetRepairs()
-						local mrps = nail:GetMaxRepairs()
+				if ( prop and prop:IsValid() ) then
+					local nhp = prop:GetNailHealth()
+					local mnhp = prop:GetMaxNailHealth()
+					local repairs = prop:GetRepairs()
+					local mrps = prop:GetMaxRepairs()
+					
+					if mrps > 0 or mnhp > 0 then
+						local mu = math.Clamp(nhp / mnhp, 0, 1)
+						local green = mu * 200
+						colNail.r = 200 - green
+						colNail.g = green
+						colNail.a = 240
 						
-						if mrps > 0 or mnhp > 0 then
-							local mu = math.Clamp(nhp / mnhp, 0, 1)
-							local green = mu * 200
-							colNail.r = 200 - green
-							colNail.g = green
-							colNail.a = 240
-							
-							DisableClipping(true)
-							surface.SetFont( "ZSHUDFontTinyerX2" )
-							surface.SetTextColor( colNail )
-							surface.SetTextPos( x_txt_offset*screenscale, 0 )
-							surface.DrawText( math.floor( prop:GetChildren()[1]:GetNailHealth() ) )
+						DisableClipping(true)
+						surface.SetFont( "ZSHUDFontTinyerX2" )
+						surface.SetTextColor( colNail )
+						surface.SetTextPos( x_txt_offset*screenscale, 0 )
+						surface.DrawText( math.floor( prop:GetNailHealth() ) )
 
-							surface.SetFont( "ZSHUDFontTinyerX2" )
-							surface.SetTextColor( 5, 247, 227 )
-							surface.SetTextPos( x_txt_offset*screenscale, 16 )
-							surface.DrawText( math.floor( prop:GetChildren()[1]:GetRepairs() ) )
-							DisableClipping(false)
-						end
+						surface.SetFont( "ZSHUDFontTinyerX2" )
+						surface.SetTextColor( 5, 247, 227 )
+						surface.SetTextPos( x_txt_offset*screenscale, 16 )
+						surface.DrawText( math.floor( prop:GetRepairs() ) )
+						DisableClipping(false)
 					end
 				end
 			end
@@ -119,14 +115,14 @@ end
 vgui.Register("ZS_PropJournal", PANEL, "Panel")
 
 --debug tool
-concommand.Add( "reload_props", function( pl, cmd, args )
+--[[concommand.Add( "reload_props", function( pl, cmd, args )
 	if GAMEMODE.PropJournal then
 		GAMEMODE.PropJournal:Remove()
 		GAMEMODE.PropJournal = nil
 	else
 		GAMEMODE.PropJournal = vgui.Create("ZS_PropJournal")
 	end
-end )
+end )]]
 
 net.Receive( "zs_nail_destroyed", function( len, pl )
 	--print("nailed destryoed")
@@ -135,13 +131,13 @@ net.Receive( "zs_nail_destroyed", function( len, pl )
 	else
 		local prop = net.ReadEntity()
 		local nailcount = net.ReadInt(5)
-		print(nailcount)
+		--print(nailcount)
 		if #GAMEMODE.PropJournal:GetChildren() > 0 then
 			for cid, pnls in ipairs( GAMEMODE.PropJournal:GetChildren() ) do
 				if pnls.SavedProp == prop and nailcount <= 0 then
 					PropDataContainer[ prop ] = nil
 					GAMEMODE.PropJournal:PushPropData()
-					pnls:Remove()
+					--pnls:Remove()
 				end
 			end
 		end
@@ -157,14 +153,14 @@ hook.Add( "KeyPress", "ZS.PropJournalCheck.KeyPress", function( ply, key )
 					if #trace_ent:GetChildren() > 0 then
 						local nail = trace_ent:GetChildren()[1]
 						if nail and nail:IsValid() then
-							if ( nail:GetDeployer() and nail:GetDeployer():IsValid() ) then
+							if ( nail.GetDeployer and nail:GetDeployer() ) then
 								if nail:GetDeployer() == ply then
 									if key == IN_USE and IsFirstTimePredicted() then
-										if not PropDataContainer[ nail:GetBaseEntity() ] and #table.GetKeys(PropDataContainer) < 18 then
-											PropDataContainer[ nail:GetBaseEntity() ] = true
+										if not PropDataContainer[ nail ] and #table.GetKeys(PropDataContainer) < 18 then
+											PropDataContainer[ nail ] = true
 											GAMEMODE.PropJournal:PushPropData()
 										else
-											PropDataContainer[ nail:GetBaseEntity() ] = nil
+											PropDataContainer[ nail ] = nil
 											GAMEMODE.PropJournal:PushPropData()
 										end
 									end
